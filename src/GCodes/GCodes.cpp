@@ -2544,6 +2544,9 @@ void GCodes::AbortPrint(GCodeBuffer& gb) noexcept
 	{
 		StopPrint(StopPrintReason::abort);
 	}
+	RetractZProbe(gb, -1);
+	gb.SetState(GCodeState::normal);
+	DoFileMacro(gb, ABORT_G, false);
 }
 
 // Cancel everything

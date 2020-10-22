@@ -275,6 +275,7 @@ public:
 	static constexpr const char* FILAMENT_CHANGE_G = "filament-change.g";
 	static constexpr const char* DAEMON_G = "daemon.g";
 	static constexpr const char* RUNONCE_G = "runonce.g";
+	static constexpr const char* ABORT_G = "abort.g";
 #if HAS_SMART_DRIVERS
 	static constexpr const char* REHOME_G = "rehome.g";
 #endif
