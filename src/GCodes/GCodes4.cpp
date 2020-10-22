@@ -258,11 +258,28 @@ void GCodes::RunStateMachine(GCodeBuffer& gb, const StringRef& reply) noexcept
 				UpdateCurrentUserPosition();			// the tool offset may have changed, so get the current position
 			}
 			gb.AdvanceState();
-			if (reprap.GetTool(newToolNumber).IsNotNull() && (toolChangeParam & TPreBit) != 0)	// 2020-04-29: run tpre file even if not all axes have been homed
+			ReadLockedPointer<Tool> newTool = reprap.GetTool(newToolNumber);
+			if (newTool.IsNotNull())
 			{
-				String<StringLength20> scratchString;
-				scratchString.printf("tpre%d.g", newToolNumber);
-				DoFileMacro(gb, scratchString.c_str(), false, 0);
+				// Check here if the new tool offsets being applied would exceed Z axis limits
+				// Although movement is only performed for FFF the user might change
+				// modes in tpre#.g that has not run yet and thus it needs to be checked
+				// in any mode, e.g. machine is in CNC mode and tpre#.g would change it to FFF mode
+				const float newZPos = (moveBuffer.coords[Z_AXIS] - newTool->GetOffset(Z_AXIS));
+				if(newZPos > platform.AxisMaximum(Z_AXIS) || newZPos < platform.AxisMinimum(Z_AXIS))
+				{
+					doingToolChange = false;
+					gb.MachineState().SetError("New tool too close to Z axis limit. Aborting tool change");
+					AbortPrint(gb);
+					gb.SetState(GCodeState::normal);
+					break;
+				}
+				if ((toolChangeParam & TPreBit) != 0)	// 2020-04-29: run tpre file even if not all axes have been homed
+				{
+					String<StringLength20> scratchString;
+					scratchString.printf("tpre%d.g", newToolNumber);
+					DoFileMacro(gb, scratchString.c_str(), false, 0);
+				}
 			}
 		}
 		break;
